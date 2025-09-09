@@ -1,82 +1,67 @@
-// src/main.cpp
 #include <iostream>
+#include <iomanip>
 #include <vector>
-#include <queue>
-#include <string>
-#include <algorithm>
 
-enum class ProcState { NEW, READY, RUNNING, WAITING, TERMINATED };
+#include "process.h"
+#include "fcfs_scheduler.h"
+#include "rr_scheduler.h"
 
-struct Process {
-    int pid;
-    std::string name;
-    int burst;      // total CPU demand
-    int remaining;  // remaining CPU time
-    int priority;
-    ProcState state;
-    Process(int id, const std::string &n, int b, int pr = 0)
-        : pid(id), name(n), burst(b), remaining(b), priority(pr), state(ProcState::NEW) {}
-};
+using namespace std;
 
-class Scheduler {
-public:
-    virtual ~Scheduler() = default;
-    virtual void add_process(const Process &p) = 0;
-    virtual void run() = 0;
-};
-
-class RoundRobin : public Scheduler {
-    std::vector<Process> procs;
-    int quantum;
-public:
-    explicit RoundRobin(int q = 2) : quantum(q) {}
-    void add_process(const Process &p) override {
-        Process np = p;
-        np.state = ProcState::READY;
-        procs.push_back(np);
+void print_gantt(const vector<GanttSeg> &g) {
+    cout << "Gantt chart (PID(run_time)):\n|";
+    for (auto &seg : g) {
+        cout << " P" << seg.first << "(" << seg.second << ") |";
     }
-    void run() override {
-        if (procs.empty()) {
-            std::cout << "No processes to schedule.\n";
-            return;
-        }
-        std::queue<int> q;
-        for (int i = 0; i < (int)procs.size(); ++i) q.push(i);
+    cout << "\n";
+}
 
-        int time = 0;
-        std::cout << "Gantt chart (PID(run_time)):\n|";
-        while (!q.empty()) {
-            int idx = q.front(); q.pop();
-            Process &p = procs[idx];
-            p.state = ProcState::RUNNING;
-            int run = std::min(quantum, p.remaining);
-            std::cout << " P" << p.pid << "(" << run << ") |";
-            time += run;
-            p.remaining -= run;
-            if (p.remaining <= 0) {
-                p.state = ProcState::TERMINATED;
-            } else {
-                p.state = ProcState::READY;
-                q.push(idx);
-            }
-        }
-        std::cout << "\nTotal simulated time: " << time << "\n\nFinal states:\n";
-        for (auto &p : procs) {
-            std::cout << "PID " << p.pid << " name=" << p.name
-                      << " state=" << (p.state == ProcState::TERMINATED ? "TERMINATED" : "OTHER")
-                      << " remaining=" << p.remaining << "\n";
-        }
+void print_stats(const vector<Process> &procs) {
+    cout << left << setw(6) << "PID" << setw(10) << "Name"
+         << setw(8) << "Arrival" << setw(8) << "Burst"
+         << setw(8) << "Start" << setw(12) << "Completion"
+         << setw(12) << "Turnaround" << setw(8) << "Waiting"
+         << setw(10) << "Response" << "\n";
+
+    double total_turnaround = 0, total_waiting = 0, total_response = 0;
+    for (auto &p : procs) {
+        cout << setw(6) << p.pid << setw(10) << p.name
+             << setw(8) << p.arrival << setw(8) << p.burst
+             << setw(8) << p.start_time << setw(12) << p.completion_time
+             << setw(12) << p.turnaround_time << setw(8) << p.waiting_time
+             << setw(10) << p.response_time << "\n";
+        total_turnaround += p.turnaround_time;
+        total_waiting += p.waiting_time;
+        total_response += p.response_time;
     }
-};
+    int n = (int)procs.size();
+    cout << fixed << setprecision(3);
+    cout << "\nAvg Turnaround = " << (total_turnaround / n)
+         << ", Avg Waiting = " << (total_waiting / n)
+         << ", Avg Response = " << (total_response / n) << "\n";
+}
 
 int main() {
-    RoundRobin scheduler(2);
-    // sample processes
-    scheduler.add_process(Process(1, "A", 5));
-    scheduler.add_process(Process(2, "B", 3));
-    scheduler.add_process(Process(3, "C", 7));
+    // sample processes: (pid, name, arrival, burst)
+    vector<Process> sample = {
+        Process(1, "A", 0, 5),
+        Process(2, "B", 1, 3),
+        Process(3, "C", 2, 7)
+    };
 
-    std::cout << "=== Mini OS Simulator (skeleton) ===\n";
-    scheduler.run();
+    cout << "=== FCFS Scheduler ===\n";
+    FCFS_Scheduler fcfs;
+    for (auto &p : sample) fcfs.add_process(p);
+    fcfs.run();
+    print_gantt(fcfs.get_gantt());
+    print_stats(fcfs.get_finished_processes());
+
+    cout << "\n=== Round Robin (quantum = 2) ===\n";
+    RR_Scheduler rr(2);
+    for (auto &p : sample) rr.add_process(p);
+    rr.run();
+    print_gantt(rr.get_gantt());
+    print_stats(rr.get_finished_processes());
+
     return 0;
 }
