@@ -5,5 +5,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(os_simulator src/main.cpp)
-# later: add src/process.cpp, src/scheduler.cpp, etc.
+include_directories(${PROJECT_SOURCE_DIR}/include)
+
+add_executable(os_simulator
+    src/main.cpp
+    src/fcfs_scheduler.cpp
+    src/rr_scheduler.cpp
+)
