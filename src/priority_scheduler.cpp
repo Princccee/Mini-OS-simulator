@@ -29,7 +29,7 @@ void PriorityScheduler::run() {
     while (completed < n) {
         // Push processes that arrived
         for (auto& p : procs) {
-            if (p.arrival <= time && p.state == ProcState::READY) {
+            if (p.arrival <= time && (p.state == ProcState::NEW || p.state == ProcState::READY)) {
                 pq.push(&p);
                 p.state = ProcState::WAITING;
             }

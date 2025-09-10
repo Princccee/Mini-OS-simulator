@@ -76,23 +76,29 @@ int main() {
     print_gantt(sjf_np.get_gantt());
     print_stats(sjf_np.get_finished_processes());
 
-    // // --- SJF Preemptive (SRTF) ---
-    // cout << "\n=== SJF (Preemptive - SRTF) ===\n";
-    // SJFScheduler sjf_p(SJFType::PREEMPTIVE);
-    // for (auto &p : sample) sjf_p.addProcess(p);
-    // sjf_p.run();
+    // --- SJF Preemptive (SRTF) ---
+    cout << "\n=== SJF (Preemptive - SRTF) ===\n";
+    SJFScheduler sjf_p(SJFType::PREEMPTIVE);
+    for (auto &p : sample) sjf_p.addProcess(p);
+    sjf_p.run();
+    print_gantt(sjf_p.get_gantt());
+    print_stats(sjf_p.get_finished_processes());
 
-    // // --- Priority Non-Preemptive ---
-    // cout << "\n=== Priority (Non-Preemptive) ===\n";
-    // PriorityScheduler prio_np(PriorityType::NON_PREEMPTIVE);
-    // for (auto &p : sample) prio_np.addProcess(p);
-    // prio_np.run();
+    // --- Priority Non-Preemptive ---
+    cout << "\n=== Priority (Non-Preemptive) ===\n";
+    PriorityScheduler prio_np(PriorityType::NON_PREEMPTIVE);
+    for (auto &p : sample) prio_np.addProcess(p);
+    prio_np.run();
+    print_gantt(prio_np.get_gantt());
+    print_stats(prio_np.get_finished_processes());
 
-    // // --- Priority Preemptive ---
-    // cout << "\n=== Priority (Preemptive) ===\n";
-    // PriorityScheduler prio_p(PriorityType::PREEMPTIVE);
-    // for (auto &p : sample) prio_p.addProcess(p);
-    // prio_p.run();
+    // --- Priority Preemptive ---
+    cout << "\n=== Priority (Preemptive) ===\n";
+    PriorityScheduler prio_p(PriorityType::PREEMPTIVE);
+    for (auto &p : sample) prio_p.addProcess(p);
+    prio_p.run();
+    print_gantt(prio_p.get_gantt());
+    print_stats(prio_p.get_finished_processes());
 
     return 0;
 }
