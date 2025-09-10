@@ -16,59 +16,88 @@ int MemoryManager::roundUpToUnit(int sz) const {
     return ((sz + unit - 1) / unit) * unit;
 }
 
-int MemoryManager::allocate(int pid, int req_size, Strategy s) {
-    if (req_size <= 0) return -1;
-    int allocSize = roundUpToUnit(req_size);
-
-    // collect candidate indices
-    std::vector<size_t> candidates;
-    for (size_t i = 0; i < blocks.size(); ++i) {
-        const Block &b = blocks[i];
-        if (b.free && b.size >= allocSize) candidates.push_back(i);
+int MemoryManager::allocate(int pid, int size, Strategy strategy) {
+    if (size <= 0) {
+        std::cout << "Invalid request size.\n";
+        return -1;
     }
-    if (candidates.empty()) return -1;
 
-    size_t chosen_idx = candidates[0];
-    if (s == FIRST_FIT) {
-        // already first
-    } else if (s == BEST_FIT) {
+    // Check if PID already exists (owner_pid)
+    for (const auto &blk : blocks) {
+        if (!blk.free && blk.owner_pid == pid) {
+            std::cout << "Allocation failed: PID " << pid << " already exists.\n";
+            return -1;
+        }
+    }
+
+    int index = -1;
+
+    if (strategy == Strategy::FIRST_FIT) {
+        for (size_t i = 0; i < blocks.size(); ++i) {
+            if (blocks[i].free && blocks[i].size >= size) { index = (int)i; break; }
+        }
+    } else if (strategy == Strategy::BEST_FIT) {
         int bestSize = INT_MAX;
-        for (size_t idx : candidates) {
-            if (blocks[idx].size < bestSize) {
-                bestSize = blocks[idx].size;
-                chosen_idx = idx;
+        for (size_t i = 0; i < blocks.size(); ++i) {
+            if (blocks[i].free && blocks[i].size >= size && blocks[i].size < bestSize) {
+                bestSize = blocks[i].size;
+                index = (int)i;
             }
         }
     } else { // WORST_FIT
         int worstSize = -1;
-        for (size_t idx : candidates) {
-            if (blocks[idx].size > worstSize) {
-                worstSize = blocks[idx].size;
-                chosen_idx = idx;
+        for (size_t i = 0; i < blocks.size(); ++i) {
+            if (blocks[i].free && blocks[i].size >= size && blocks[i].size > worstSize) {
+                worstSize = blocks[i].size;
+                index = (int)i;
             }
         }
     }
 
-    Block chosen = blocks[chosen_idx];
-    int newBlockId = next_block_id++;
-
-    if (chosen.size == allocSize) {
-        // exact fit
-        blocks[chosen_idx].free = false;
-        blocks[chosen_idx].owner_pid = pid;
-        blocks[chosen_idx].req_size = req_size;
-        return blocks[chosen_idx].id;
-    } else {
-        // split the block into allocated + remaining free
-        Block allocBlock{ newBlockId, chosen.start, allocSize, false, pid, req_size };
-        Block remBlock{ next_block_id++, chosen.start + allocSize, chosen.size - allocSize, true, -1, 0 };
-
-        // replace chosen with allocBlock and insert remBlock after
-        blocks[chosen_idx] = allocBlock;
-        blocks.insert(blocks.begin() + chosen_idx + 1, remBlock);
-        return allocBlock.id;
+    if (index == -1) {
+        std::cout << "Allocation failed: No suitable block found for PID "
+                  << pid << " (size " << size << ").\n";
+        return -1;
     }
+
+    // If splitting required: keep current block's id for allocated part,
+    // create a new block id for the remaining free block.
+    if (blocks[index].size > size) {
+        // allocated part: reuse block id
+        blocks[index].req_size = size;
+        blocks[index].owner_pid = pid;
+        blocks[index].free = false;
+        // size remains to be set to requested
+        int original_start = blocks[index].start;
+        int original_size = blocks[index].size;
+
+        blocks[index].size = size;
+        // start remains original_start
+
+        // remaining free block
+        Block rem;
+        rem.id = next_block_id++;
+        rem.start = original_start + size;
+        rem.size = original_size - size;
+        rem.free = true;
+        rem.owner_pid = -1;
+        rem.req_size = 0;
+
+        // insert remainder after current index
+        blocks.insert(blocks.begin() + index + 1, rem);
+    } else {
+        // exact fit: mark owner fields
+        blocks[index].owner_pid = pid;
+        blocks[index].req_size = size;
+        blocks[index].free = false;
+    }
+
+    std::cout << "Allocated PID " << pid << " at address " << blocks[index].start
+              << " (size " << blocks[index].size << ").\n";
+    return blocks[index].start;
 }
+
+
 
 bool MemoryManager::freeByBlockId(int blockId) {
     for (size_t i = 0; i < blocks.size(); ++i) {
@@ -87,18 +116,27 @@ bool MemoryManager::freeByBlockId(int blockId) {
 
 bool MemoryManager::freeByPid(int pid) {
     bool freed = false;
+
     for (size_t i = 0; i < blocks.size(); ++i) {
         if (!blocks[i].free && blocks[i].owner_pid == pid) {
             blocks[i].free = true;
             blocks[i].owner_pid = -1;
             blocks[i].req_size = 0;
-            tryMergeAroundIndex(i);
             freed = true;
-            // continue to free any other blocks owned by same pid (if you support multiple)
+            // merge neighbors; tryMergeAroundIndex updates blocks vector
+            tryMergeAroundIndex(i);
+            // after merging the current index may have changed/moved,
+            // but tryMergeAroundIndex merges correctly for this index
         }
     }
+
+    if (freed) std::cout << "Freed memory for PID " << pid << ".\n";
+    else std::cout << "Free failed: PID " << pid << " not found.\n";
+
     return freed;
 }
+
+
 
 void MemoryManager::tryMergeAroundIndex(size_t idx) {
     // merge with previous if free
@@ -114,20 +152,52 @@ void MemoryManager::tryMergeAroundIndex(size_t idx) {
     }
 }
 
+// void MemoryManager::compact() {
+//     // simple compaction: merge all free blocks into one at the end
+//     // Note: this does not relocate allocated blocks in this simulation
+//     // because we don't simulate relocation; we only merge adjacent free blocks.
+//     // For true compaction with relocation, you'd move allocated blocks and update start offsets.
+//     for (size_t i = 0; i + 1 < blocks.size();) {
+//         if (blocks[i].free && blocks[i+1].free) {
+//             blocks[i].size += blocks[i+1].size;
+//             blocks.erase(blocks.begin() + i + 1);
+//         } else {
+//             ++i;
+//         }
+//     }
+// }
+
 void MemoryManager::compact() {
-    // simple compaction: merge all free blocks into one at the end
-    // Note: this does not relocate allocated blocks in this simulation
-    // because we don't simulate relocation; we only merge adjacent free blocks.
-    // For true compaction with relocation, you'd move allocated blocks and update start offsets.
-    for (size_t i = 0; i + 1 < blocks.size();) {
-        if (blocks[i].free && blocks[i+1].free) {
-            blocks[i].size += blocks[i+1].size;
-            blocks.erase(blocks.begin() + i + 1);
-        } else {
-            ++i;
+    int currentPos = 0;
+    std::vector<Block> newBlocks;
+
+    // Slide all allocated blocks left
+    for (auto &block : blocks) {
+        if (!block.free) {
+            Block newBlock = block;
+            newBlock.start = currentPos;
+            newBlocks.push_back(newBlock);
+            currentPos += block.size;
         }
     }
+
+    // Add one free block with remaining memory
+    int freeSize = total_size - currentPos;
+    if (freeSize > 0) {
+        Block freeBlock;
+        freeBlock.id = next_block_id++;
+        freeBlock.start = currentPos;
+        freeBlock.size = freeSize;
+        freeBlock.free = true;
+        freeBlock.owner_pid = -1;
+        freeBlock.req_size = 0;
+        newBlocks.push_back(freeBlock);
+    }
+
+    blocks = newBlocks;
+    std::cout << "Memory compacted.\n";
 }
+
 
 void MemoryManager::printBlockTable() const {
     std::cout << "\nBlock Table:\n";
