@@ -5,6 +5,8 @@
 #include "process.h"
 #include "fcfs_scheduler.h"
 #include "rr_scheduler.h"
+#include "sjf_scheduler.h"
+#include "priority_scheduler.h"
 
 using namespace std;
 
@@ -42,13 +44,14 @@ void print_stats(const vector<Process> &procs) {
 }
 
 int main() {
-    // sample processes: (pid, name, arrival, burst)
+    // sample processes: (pid, name, arrival, burst, priority)
     vector<Process> sample = {
-        Process(1, "A", 0, 5),
-        Process(2, "B", 1, 3),
-        Process(3, "C", 2, 7)
+        Process(1, "A", 0, 5, 2),
+        Process(2, "B", 1, 3, 1),
+        Process(3, "C", 2, 7, 3)
     };
 
+    // --- FCFS ---
     cout << "=== FCFS Scheduler ===\n";
     FCFS_Scheduler fcfs;
     for (auto &p : sample) fcfs.add_process(p);
@@ -56,12 +59,46 @@ int main() {
     print_gantt(fcfs.get_gantt());
     print_stats(fcfs.get_finished_processes());
 
+    // --- Round Robin ---
     cout << "\n=== Round Robin (quantum = 2) ===\n";
     RR_Scheduler rr(2);
     for (auto &p : sample) rr.add_process(p);
     rr.run();
     print_gantt(rr.get_gantt());
     print_stats(rr.get_finished_processes());
+
+    // --- SJF Non-Preemptive ---
+    cout << "\n=== SJF (Non-Preemptive) ===\n";
+    SJFScheduler sjf_np(SJFType::NON_PREEMPTIVE);
+    for (auto &p : sample) 
+        sjf_np.addProcess(p);
+    sjf_np.run();
+    print_gantt(sjf_np.get_gantt());
+    print_stats(sjf_np.get_finished_processes());
+
+    // --- SJF Preemptive (SRTF) ---
+    cout << "\n=== SJF (Preemptive - SRTF) ===\n";
+    SJFScheduler sjf_p(SJFType::PREEMPTIVE);
+    for (auto &p : sample) sjf_p.addProcess(p);
+    sjf_p.run();
+    print_gantt(sjf_p.get_gantt());
+    print_stats(sjf_p.get_finished_processes());
+
+    // --- Priority Non-Preemptive ---
+    cout << "\n=== Priority (Non-Preemptive) ===\n";
+    PriorityScheduler prio_np(PriorityType::NON_PREEMPTIVE);
+    for (auto &p : sample) prio_np.addProcess(p);
+    prio_np.run();
+    print_gantt(prio_np.get_gantt());
+    print_stats(prio_np.get_finished_processes());
+
+    // --- Priority Preemptive ---
+    cout << "\n=== Priority (Preemptive) ===\n";
+    PriorityScheduler prio_p(PriorityType::PREEMPTIVE);
+    for (auto &p : sample) prio_p.addProcess(p);
+    prio_p.run();
+    print_gantt(prio_p.get_gantt());
+    print_stats(prio_p.get_finished_processes());
 
     return 0;
 }

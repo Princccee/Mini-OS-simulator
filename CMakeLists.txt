@@ -11,4 +11,6 @@ add_executable(os_simulator
     src/main.cpp
     src/fcfs_scheduler.cpp
     src/rr_scheduler.cpp
+    src/sjf_scheduler.cpp
+    src/priority_scheduler.cpp
 )
