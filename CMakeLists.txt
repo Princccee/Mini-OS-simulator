@@ -8,9 +8,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 add_executable(os_simulator
-    src/main.cpp
+    # src/main.cpp
     src/fcfs_scheduler.cpp
     src/rr_scheduler.cpp
     src/sjf_scheduler.cpp
     src/priority_scheduler.cpp
+    src/memory_manager.cpp
+    src/memory_demo.cpp
+
 )
