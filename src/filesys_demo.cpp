@@ -22,6 +22,14 @@ void print_help() {
 
 int main() {
     FileSystem fs;
+    const std::string statefile = "fs_state.json";
+
+    if (fs.load_from_file(statefile)) {
+        std::cout << "Loaded filesystem state from " << statefile << "\n";
+    } else {
+        std::cout << "Starting with empty filesystem (no state loaded)\n";
+    }
+
     std::string line;
     print_help();
     while (true) {
@@ -32,7 +40,15 @@ int main() {
         std::istringstream iss(line);
         std::string cmd;
         iss >> cmd;
-        if (cmd == "exit") break;
+        if (cmd == "exit") {
+            // save on exit
+            if (fs.save_to_file(statefile)) {
+                std::cout << "Saved filesystem state to " << statefile << "\n";
+            } else {
+                std::cout << "Warning: failed to save filesystem state to " << statefile << "\n";
+            }
+            break;
+        }
         else if (cmd == "help") { print_help(); continue; }
         else if (cmd == "mkdir") {
             std::string path; iss >> path;
@@ -70,7 +86,6 @@ int main() {
             std::string rest;
             std::getline(iss, rest);
             if (path.empty()) { std::cout << "write: missing path\n"; continue; }
-            // rest may start with space
             if (!rest.empty() && rest[0] == ' ') rest.erase(rest.begin());
             if (!fs.write_file(path, rest)) std::cout << "write: failed\n";
         }
