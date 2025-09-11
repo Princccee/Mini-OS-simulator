@@ -16,5 +16,7 @@ add_executable(os_simulator
     src/memory_manager.cpp
     # src/memory_demo.cpp
     src/paging.cpp
-    src/paging_demo.cpp
+    # src/paging_demo.cpp
+    src/filesys.cpp
+    src/filesys_demo.cpp
 )
