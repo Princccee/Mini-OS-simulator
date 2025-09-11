@@ -38,18 +38,39 @@ int main() {
             return 0;
         }
 
-        // Choose replacement policy
-        std::cout << "Choose replacement policy (0=FIFO, 1=LRU, 2=OPT): ";
-        int pol;
-        if (!(std::cin >> pol)) return 0;
+        // // Choose replacement policy
+        // std::cout << "Choose replacement policy (0=FIFO, 1=LRU, 2=OPT): ";
+        // int pol;
+        // if (!(std::cin >> pol)) return 0;
 
-        PagingSimulator::Policy policy = PagingSimulator::FIFO;
-        if (pol == 1) policy = PagingSimulator::LRU;
-        else if (pol == 2) policy = PagingSimulator::OPT;
+        // PagingSimulator::Policy policy = PagingSimulator::FIFO;
+        // if (pol == 1) policy = PagingSimulator::LRU;
+        // else if (pol == 2) policy = PagingSimulator::OPT;
 
-        // Run simulation
-        PagingSimulator sim(memSize, pageSize, policy, refs);
-        sim.run();
+        // // Run simulation
+        // PagingSimulator sim(memSize, pageSize, policy, refs);
+        // sim.run();
+
+        // Run all three policies
+        std::cout << "\n=== Running all policies for comparison ===\n";
+
+        std::cout << "\n>>> FIFO <<<\n";
+        {
+            PagingSimulator sim(memSize, pageSize, PagingSimulator::FIFO, refs);
+            sim.run();
+        }
+
+        std::cout << "\n>>> LRU <<<\n";
+        {
+            PagingSimulator sim(memSize, pageSize, PagingSimulator::LRU, refs);
+            sim.run();
+        }
+
+        std::cout << "\n>>> OPT <<<\n";
+        {
+            PagingSimulator sim(memSize, pageSize, PagingSimulator::OPT, refs);
+            sim.run();
+        }
 
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << "\n";
