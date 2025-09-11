@@ -14,6 +14,7 @@ add_executable(os_simulator
     src/sjf_scheduler.cpp
     src/priority_scheduler.cpp
     src/memory_manager.cpp
-    src/memory_demo.cpp
-
+    # src/memory_demo.cpp
+    src/paging.cpp
+    src/paging_demo.cpp
 )
