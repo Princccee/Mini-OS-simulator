@@ -18,5 +18,7 @@ add_executable(os_simulator
     src/paging.cpp
     # src/paging_demo.cpp
     src/filesys.cpp
-    src/filesys_demo.cpp
+    # src/filesys_demo.cpp
+    src/runner.cpp
+    src/runner_demo.cpp
 )
